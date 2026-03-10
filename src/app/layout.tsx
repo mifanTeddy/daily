@@ -6,7 +6,7 @@ import { TopNav } from "@/components/TopNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "日报技术流 | 中文开发者内容聚合",
+  title: "Daily",
   description: "中文技术内容聚合前端，支持中英文切换、收藏、筛选与详情页。"
 };
 

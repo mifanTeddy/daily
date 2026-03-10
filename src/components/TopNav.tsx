@@ -15,7 +15,7 @@ export function TopNav() {
       <div className="top-nav-inner">
         <Link className="brand" href="/">
           <span className="brand-dot" />
-          日报技术流
+          Daily
         </Link>
 
         <nav className="main-nav" aria-label="主导航">
