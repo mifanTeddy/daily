@@ -54,9 +54,7 @@ const dictionary = {
     sidebar: {
       rhythmTitle: "今日节奏",
       rhythmDesc: "高质量技术内容，按质量与时效混排。先刷 10 分钟，再决定深读。",
-      hotTopics: "热门话题",
-      sourceTitle: "内容来源",
-      sourceDesc: "数据由后端 API 提供，支持双语文章读取与上传。"
+      hotTopics: "热门话题"
     },
     common: {
       allTopics: "全部",
@@ -114,9 +112,7 @@ const dictionary = {
     sidebar: {
       rhythmTitle: "Daily Rhythm",
       rhythmDesc: "High-quality tech reads mixed by quality and freshness.",
-      hotTopics: "Hot Topics",
-      sourceTitle: "Content Source",
-      sourceDesc: "Data is provided by backend APIs with bilingual read and upload support."
+      hotTopics: "Hot Topics"
     },
     common: {
       allTopics: "All",

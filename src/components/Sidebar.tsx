@@ -29,11 +29,6 @@ export function Sidebar(props: {
           ))}
         </ul>
       </section>
-
-      <section className="side-card side-note">
-        <h2>{copy.sidebar.sourceTitle}</h2>
-        <p>{copy.sidebar.sourceDesc}</p>
-      </section>
     </aside>
   );
 }

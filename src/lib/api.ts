@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 
-import { mockArticles } from "@/data/mockArticles";
 import type {
   Article,
   ArticleBase,
@@ -12,7 +11,7 @@ import type {
 } from "@/lib/types";
 
 const PAGE_SIZE = 6;
-const inMemoryArticles: ArticleBase[] = [...mockArticles];
+const inMemoryArticles: ArticleBase[] = [];
 
 function localizeArticle(article: ArticleBase, language: LanguageCode): Article {
   return {
