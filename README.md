@@ -1,152 +1,136 @@
-# 日报技术流（中文技术内容前端）
+# 日报技术流
 
-一个可运行的中文技术内容聚合前端，采用深浅双主题设计，并预留了 OpenClaw 内容上传/入库后的 API 对接点。
+一个可直接上线的技术内容站项目，包含：
 
-## 已实现功能
+- 前端（Next.js）：暗色主题、中文/英文界面切换、文章双语切换
+- 后端（Fastify）：Feed/话题/详情 API、双语上传 API
 
-- 首页 Feed：`推荐 / 最新 / 关注`
-- 主题筛选：按话题过滤内容
-- 文章详情页 + 相关推荐
-- 收藏与已读（浏览器本地存储）
-- 深色/浅色主题切换（含同配色 token）
-- 可替换 API 层（前端已通过 `/api/*` 访问数据）
+## 目录结构
 
-## 技术栈
+```text
+.
+├─ src/                 # 前端代码（Next.js）
+├─ backend/             # 独立后端服务（Fastify）
+├─ vercel.json          # 前端在 Vercel 的构建配置
+└─ .env.example         # 前端环境变量示例
+```
 
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS（结合自定义 CSS token）
+## 功能状态
 
-## 本地启动
+- 暗色主题（仅暗色）
+- 中英文界面切换
+- 文章内容中英文切换（基于 `lang=zh|en`）
+- 首页 Feed / 发现 / 收藏 / 详情
+- 文章上传接口（单条与批量，含中英文标题摘要）
+
+## 前端本地启动
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-打开 [http://localhost:3000](http://localhost:3000)
+默认访问：`http://localhost:3000`
 
-生产构建：
+## 后端本地启动
 
 ```bash
-pnpm build
-pnpm start
+cd backend
+npm install
+npm run dev
 ```
 
-## 项目结构
+默认访问：`http://localhost:8787`
 
-```text
-src/
-  app/
-    page.tsx                      # 首页
-    discover/page.tsx             # 发现页
-    bookmarks/page.tsx            # 收藏页
-    article/[id]/page.tsx         # 文章详情
-    api/
-      feed/route.ts               # Feed API
-      topics/route.ts             # 主题 API
-      articles/[id]/route.ts      # 文章详情 API
-      articles/[id]/related/route.ts # 相关推荐 API
-  components/
-    FeedClient.tsx
-    DiscoverClient.tsx
-    BookmarksClient.tsx
-    ArticleDetailClient.tsx
-    ArticleCard.tsx
-    TopNav.tsx
-    ThemeToggle.tsx
-  lib/
-    api.ts                        # mock 数据服务逻辑
-    client-api.ts                 # 前端 HTTP API 客户端
-    storage.ts                    # 本地收藏/已读状态
-    types.ts                      # 数据类型定义
-  data/
-    mockArticles.ts               # 示例中文内容
+## 前后端联调
+
+把前端 `.env.local` 设置为：
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8787/api
 ```
 
-## API 契约（后续 OpenClaw 可直接对接）
+然后重启前端。
 
-### `GET /api/feed`
+## 前端部署（Vercel）
 
-查询参数：
+1. 在 Vercel 导入本仓库。
+2. Framework 选 `Next.js`。
+3. 环境变量设置：
+   - `NEXT_PUBLIC_API_BASE_URL=https://<你的后端域名>/api`
+4. 直接 Deploy。
 
-- `tab`: `recommended | latest | following`
-- `topic`: 可选，话题名
-- `cursor`: 可选，分页游标
-- `following`: 可选，逗号分隔话题，如 `AI,前端`
+`vercel.json` 已配置：
 
-返回：
+- install: `pnpm install --frozen-lockfile`
+- build: `pnpm build`
+- dev: `pnpm dev`
+
+## 后端部署方案
+
+后端在 `backend/`，可直接部署到任意 Node 环境（VM / 容器 / PaaS）。
+
+### 方式 A：直接 Node 部署
+
+```bash
+cd backend
+npm install
+npm run build
+npm run start
+```
+
+必要环境变量：
+
+- `PORT`（默认 `8787`）
+- `HOST`（默认 `0.0.0.0`）
+- `ALLOW_ORIGIN`（默认 `*`，生产建议填前端域名）
+- `DATA_FILE`（默认 `./data/articles.json`）
+
+### 方式 B：Docker 部署
+
+```bash
+cd backend
+docker build -t daily-cn-backend .
+docker run -p 8787:8787 \
+  -e PORT=8787 \
+  -e HOST=0.0.0.0 \
+  -e ALLOW_ORIGIN=https://<你的前端域名> \
+  daily-cn-backend
+```
+
+## API 一览（后端）
+
+- `GET /health`
+- `GET /api/feed?tab=recommended&cursor=0&topic=AI&following=AI,前端&lang=zh`
+- `GET /api/topics`
+- `GET /api/articles?lang=zh`
+- `GET /api/articles/:id?lang=en`
+- `GET /api/articles/:id/related?lang=zh`
+- `POST /api/articles/upload`
+- `POST /api/articles/batch-upload`
+
+### 上传接口字段（双语）
+
+`POST /api/articles/upload`
 
 ```json
 {
-  "items": [
-    {
-      "id": "cn-001",
-      "title": "...",
-      "summaryZh": "...",
-      "url": "...",
-      "sourceName": "...",
-      "author": "...",
-      "publishedAt": "2026-03-09T09:00:00+08:00",
-      "topics": ["AI", "后端"],
-      "difficulty": "中级",
-      "readTimeMin": 8,
-      "qualityScore": 93,
-      "freshnessScore": 97,
-      "hotScore": 89,
-      "language": "zh",
-      "coverImage": "linear-gradient(...)"
-    }
-  ],
-  "nextCursor": "6"
+  "titleZh": "中文标题",
+  "titleEn": "English title",
+  "summaryZh": "中文摘要",
+  "summaryEn": "English summary",
+  "url": "https://example.com/article",
+  "sourceName": "来源",
+  "author": "作者",
+  "publishedAt": "2026-03-10T10:00:00+08:00",
+  "topics": ["AI", "后端"],
+  "difficulty": "intermediate",
+  "readTimeMin": 8,
+  "qualityScore": 90,
+  "freshnessScore": 95,
+  "hotScore": 88,
+  "coverImage": "linear-gradient(120deg, #3169F5 0%, #2CDCE6 100%)"
 }
 ```
 
-### `GET /api/topics`
-
-返回：
-
-```json
-{
-  "items": [
-    { "name": "全部", "count": 12 },
-    { "name": "AI", "count": 3 }
-  ]
-}
-```
-
-### `GET /api/articles/:id`
-
-返回：
-
-```json
-{
-  "item": {
-    "id": "cn-001",
-    "title": "..."
-  }
-}
-```
-
-### `GET /api/articles/:id/related`
-
-返回：
-
-```json
-{
-  "items": [{ "id": "cn-002", "title": "..." }]
-}
-```
-
-## OpenClaw 对接建议
-
-把 OpenClaw 作为内容管道：
-
-1. 抓取候选内容（RSS/API/站点）
-2. 清洗和去重
-3. 中文摘要与标签生成
-4. 质量分计算（quality/freshness/hot）
-5. 写入你的数据库
-6. 用真实后端替换当前 `src/app/api/*` 中的数据来源
-
-当前前端已经只依赖 API 返回字段，不依赖 mock 数据结构外的信息。
+批量上传：`POST /api/articles/batch-upload`，body 为 `{ "items": [ ... ] }`。

@@ -1,22 +1,20 @@
 "use client";
 
+import { getTabLabel, t } from "@/lib/i18n";
 import type { FeedTab } from "@/lib/types";
-
-const tabLabels: Record<FeedTab, string> = {
-  recommended: "推荐",
-  latest: "最新",
-  following: "关注"
-};
+import { useLanguage } from "@/components/LanguageProvider";
 
 export function FeedTabs(props: {
   active: FeedTab;
   onChange: (tab: FeedTab) => void;
 }) {
   const { active, onChange } = props;
+  const { language } = useLanguage();
+  const copy = t(language);
 
   return (
-    <div className="tabs" role="tablist" aria-label="信息流类型">
-      {(Object.keys(tabLabels) as FeedTab[]).map((tab) => (
+    <div className="tabs" role="tablist" aria-label={copy.feed.tabAria}>
+      {(["recommended", "latest", "following"] as FeedTab[]).map((tab) => (
         <button
           key={tab}
           type="button"
@@ -25,7 +23,7 @@ export function FeedTabs(props: {
           aria-selected={active === tab}
           onClick={() => onChange(tab)}
         >
-          {tabLabels[tab]}
+          {getTabLabel(language, tab)}
         </button>
       ))}
     </div>

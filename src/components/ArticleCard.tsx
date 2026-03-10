@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 
+import { useLanguage } from "@/components/LanguageProvider";
 import { formatDate } from "@/lib/format";
+import { getDifficultyLabel, t } from "@/lib/i18n";
 import type { Article } from "@/lib/types";
 
 export function ArticleCard(props: {
@@ -13,6 +15,8 @@ export function ArticleCard(props: {
   onToggleRead: (id: string) => void;
 }) {
   const { article, isSaved, isRead, onToggleRead, onToggleSave } = props;
+  const { language } = useLanguage();
+  const copy = t(language);
 
   return (
     <article className={isRead ? "article-card read" : "article-card"}>
@@ -24,14 +28,14 @@ export function ArticleCard(props: {
           <span>·</span>
           <span>{article.author}</span>
           <span>·</span>
-          <span>{formatDate(article.publishedAt)}</span>
+          <span>{formatDate(article.publishedAt, language)}</span>
         </div>
 
         <Link className="article-title" href={`/article/${article.id}`}>
           {article.title}
         </Link>
 
-        <p className="article-summary">{article.summaryZh}</p>
+        <p className="article-summary">{article.summary}</p>
 
         <div className="topic-tag-wrap">
           {article.topics.map((topic) => (
@@ -43,20 +47,26 @@ export function ArticleCard(props: {
 
         <div className="article-footer">
           <div className="article-scores">
-            <span>难度 {article.difficulty}</span>
-            <span>{article.readTimeMin} 分钟</span>
-            <span>热度 {article.hotScore}</span>
+            <span>
+              {copy.article.difficulty} {getDifficultyLabel(language, article.difficulty)}
+            </span>
+            <span>
+              {article.readTimeMin} {copy.article.metaMinute}
+            </span>
+            <span>
+              {copy.article.heat} {article.hotScore}
+            </span>
           </div>
 
           <div className="article-actions">
             <button className={isRead ? "action-btn active" : "action-btn"} onClick={() => onToggleRead(article.id)} type="button">
-              {isRead ? "已读" : "标记已读"}
+              {isRead ? copy.article.read : copy.article.markRead}
             </button>
             <button className={isSaved ? "action-btn active" : "action-btn"} onClick={() => onToggleSave(article.id)} type="button">
-              {isSaved ? "已收藏" : "收藏"}
+              {isSaved ? copy.article.saved : copy.article.save}
             </button>
             <a className="action-btn" href={article.url} rel="noreferrer" target="_blank">
-              原文
+              {copy.article.original}
             </a>
           </div>
         </div>

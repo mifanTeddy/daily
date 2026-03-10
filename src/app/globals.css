@@ -31,32 +31,6 @@
   --shadow-card: 0 14px 34px color-mix(in srgb, #000000, transparent 66%);
 }
 
-:root[data-theme="light"] {
-  --bg: #ffffff;
-  --bg-subtle: #f5f8fc;
-  --bg-popover: #ffffff;
-
-  --text-primary: #0e1217;
-  --text-secondary: #2d313a;
-  --text-tertiary: #525866;
-
-  --brand: #ac1de4;
-  --brand-hover: #c029f0;
-
-  --accent-blue: #08c0ce;
-  --accent-link: #2556ed;
-  --success: #15ce5c;
-  --warning: #fa6620;
-  --danger: #c72017;
-
-  --border-subtle: color-mix(in srgb, var(--text-tertiary), transparent 80%);
-  --border-strong: color-mix(in srgb, var(--text-tertiary), transparent 65%);
-  --surface-float: color-mix(in srgb, var(--text-tertiary), transparent 94%);
-  --surface-hover: color-mix(in srgb, var(--text-tertiary), transparent 90%);
-
-  --shadow-card: 0 16px 34px color-mix(in srgb, #0e1217, transparent 86%);
-}
-
 * {
   box-sizing: border-box;
 }

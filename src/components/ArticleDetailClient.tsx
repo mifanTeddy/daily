@@ -4,13 +4,18 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { ArticleCard } from "@/components/ArticleCard";
+import { useLanguage } from "@/components/LanguageProvider";
 import { fetchArticle, fetchRelatedArticles } from "@/lib/client-api";
 import { formatDate } from "@/lib/format";
+import { getDifficultyLabel, t } from "@/lib/i18n";
 import { getBookmarks, getReadItems, toggleBookmark, toggleRead } from "@/lib/storage";
 import type { Article } from "@/lib/types";
 
 export function ArticleDetailClient(props: { id: string }) {
   const { id } = props;
+  const { language } = useLanguage();
+  const copy = t(language);
+
   const [article, setArticle] = useState<Article | null>(null);
   const [related, setRelated] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,20 +29,20 @@ export function ArticleDetailClient(props: { id: string }) {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchArticle(id), fetchRelatedArticles(id)])
+    Promise.all([fetchArticle(id, language), fetchRelatedArticles(id, language)])
       .then(([entry, relatedList]) => {
         setArticle(entry);
         setRelated(relatedList);
       })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, language]);
 
   if (loading) {
     return <div className="skeleton-card tall" />;
   }
 
   if (!article) {
-    return <div className="empty-box">文章不存在，返回首页继续阅读。</div>;
+    return <div className="empty-box">{copy.article.notFound}</div>;
   }
 
   return (
@@ -52,34 +57,44 @@ export function ArticleDetailClient(props: { id: string }) {
           ))}
         </div>
         <h1>{article.title}</h1>
-        <p>{article.summaryZh}</p>
+        <p>{article.summary}</p>
         <div className="article-meta large">
           <span>{article.sourceName}</span>
           <span>·</span>
           <span>{article.author}</span>
           <span>·</span>
-          <span>{formatDate(article.publishedAt)}</span>
+          <span>{formatDate(article.publishedAt, language)}</span>
           <span>·</span>
-          <span>{article.readTimeMin} 分钟阅读</span>
+          <span>
+            {getDifficultyLabel(language, article.difficulty)} · {article.readTimeMin} {copy.article.readTimeSuffix}
+          </span>
         </div>
         <div className="article-actions">
-          <button className={readSet.has(article.id) ? "action-btn active" : "action-btn"} onClick={() => setReadSet(toggleRead(article.id))} type="button">
-            {readSet.has(article.id) ? "已读" : "标记已读"}
+          <button
+            className={readSet.has(article.id) ? "action-btn active" : "action-btn"}
+            onClick={() => setReadSet(toggleRead(article.id))}
+            type="button"
+          >
+            {readSet.has(article.id) ? copy.article.read : copy.article.markRead}
           </button>
-          <button className={savedSet.has(article.id) ? "action-btn active" : "action-btn"} onClick={() => setSavedSet(toggleBookmark(article.id))} type="button">
-            {savedSet.has(article.id) ? "已收藏" : "收藏"}
+          <button
+            className={savedSet.has(article.id) ? "action-btn active" : "action-btn"}
+            onClick={() => setSavedSet(toggleBookmark(article.id))}
+            type="button"
+          >
+            {savedSet.has(article.id) ? copy.article.saved : copy.article.save}
           </button>
           <a className="action-btn" href={article.url} rel="noreferrer" target="_blank">
-            打开原文
+            {copy.article.openOriginal}
           </a>
           <Link className="action-btn" href="/">
-            返回首页
+            {copy.article.backHome}
           </Link>
         </div>
       </header>
 
       <section className="related-block">
-        <h2>相关推荐</h2>
+        <h2>{copy.article.related}</h2>
         <div className="card-list">
           {related.map((entry) => (
             <ArticleCard

@@ -1,19 +1,38 @@
+import { randomUUID } from "node:crypto";
+
 import { mockArticles } from "@/data/mockArticles";
-import type { Article, FeedResponse, FeedTab, TopicMeta } from "@/lib/types";
+import type {
+  Article,
+  ArticleBase,
+  FeedResponse,
+  FeedTab,
+  LanguageCode,
+  TopicMeta,
+  UploadArticleInput
+} from "@/lib/types";
 
 const PAGE_SIZE = 6;
+const inMemoryArticles: ArticleBase[] = [...mockArticles];
 
-function weightForRecommended(article: Article): number {
+function localizeArticle(article: ArticleBase, language: LanguageCode): Article {
+  return {
+    ...article,
+    title: language === "zh" ? article.titleZh : article.titleEn,
+    summary: language === "zh" ? article.summaryZh : article.summaryEn
+  };
+}
+
+function weightForRecommended(article: ArticleBase): number {
   return article.qualityScore * 0.45 + article.freshnessScore * 0.35 + article.hotScore * 0.2;
 }
 
-function sortByDateDesc(data: Article[]): Article[] {
+function sortByDateDesc(data: ArticleBase[]): ArticleBase[] {
   return [...data].sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
 }
 
-function paginate(data: Article[], cursor?: string): FeedResponse {
+function paginate(data: ArticleBase[], cursor: string | undefined, language: LanguageCode): FeedResponse {
   const offset = cursor ? Number(cursor) : 0;
-  const items = data.slice(offset, offset + PAGE_SIZE);
+  const items = data.slice(offset, offset + PAGE_SIZE).map((entry) => localizeArticle(entry, language));
   const nextOffset = offset + PAGE_SIZE;
 
   return {
@@ -27,11 +46,12 @@ export async function getFeed(params: {
   cursor?: string;
   topic?: string;
   followingTopics?: string[];
+  lang: LanguageCode;
 }): Promise<FeedResponse> {
-  const { tab, cursor, topic, followingTopics = [] } = params;
+  const { tab, cursor, topic, followingTopics = [], lang } = params;
 
-  let data = [...mockArticles];
-  if (topic && topic !== "全部") {
+  let data = [...inMemoryArticles];
+  if (topic) {
     data = data.filter((article) => article.topics.includes(topic));
   }
 
@@ -44,42 +64,44 @@ export async function getFeed(params: {
     data = [...data].sort((a, b) => weightForRecommended(b) - weightForRecommended(a));
   }
 
-  await new Promise((resolve) => setTimeout(resolve, 120));
-  return paginate(data, cursor);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  return paginate(data, cursor, lang);
 }
 
-export async function getTopics(): Promise<TopicMeta[]> {
+export async function getTopics(_lang: LanguageCode): Promise<TopicMeta[]> {
   const map = new Map<string, number>();
 
-  for (const article of mockArticles) {
+  for (const article of inMemoryArticles) {
     for (const topic of article.topics) {
       map.set(topic, (map.get(topic) ?? 0) + 1);
     }
   }
 
-  const list = [{ name: "全部", count: mockArticles.length }].concat(
-    [...map.entries()]
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "zh-Hans"))
-  );
+  const list = [...map.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "en"));
 
-  await new Promise((resolve) => setTimeout(resolve, 80));
+  await new Promise((resolve) => setTimeout(resolve, 40));
   return list;
 }
 
-export async function getArticleById(id: string): Promise<Article | null> {
-  const article = mockArticles.find((entry) => entry.id === id) ?? null;
-  await new Promise((resolve) => setTimeout(resolve, 80));
-  return article;
+export async function getAllArticles(language: LanguageCode): Promise<Article[]> {
+  return sortByDateDesc(inMemoryArticles).map((entry) => localizeArticle(entry, language));
 }
 
-export async function getRelatedArticles(id: string): Promise<Article[]> {
-  const current = mockArticles.find((entry) => entry.id === id);
+export async function getArticleById(id: string, language: LanguageCode): Promise<Article | null> {
+  const article = inMemoryArticles.find((entry) => entry.id === id) ?? null;
+  await new Promise((resolve) => setTimeout(resolve, 40));
+  return article ? localizeArticle(article, language) : null;
+}
+
+export async function getRelatedArticles(id: string, language: LanguageCode): Promise<Article[]> {
+  const current = inMemoryArticles.find((entry) => entry.id === id);
   if (!current) {
     return [];
   }
 
-  const related = mockArticles
+  const related = inMemoryArticles
     .filter((entry) => entry.id !== id)
     .map((entry) => {
       const overlap = entry.topics.filter((topic) => current.topics.includes(topic)).length;
@@ -88,8 +110,39 @@ export async function getRelatedArticles(id: string): Promise<Article[]> {
     .filter((row) => row.overlap > 0)
     .sort((a, b) => b.overlap - a.overlap || b.entry.hotScore - a.entry.hotScore)
     .slice(0, 4)
-    .map((row) => row.entry);
+    .map((row) => localizeArticle(row.entry, language));
 
-  await new Promise((resolve) => setTimeout(resolve, 80));
+  await new Promise((resolve) => setTimeout(resolve, 40));
   return related;
+}
+
+export async function uploadArticle(input: UploadArticleInput): Promise<ArticleBase> {
+  const normalized: ArticleBase = {
+    ...input,
+    id: input.id ?? randomUUID()
+  };
+
+  const existingIndex = inMemoryArticles.findIndex(
+    (entry) => entry.id === normalized.id || entry.url === normalized.url
+  );
+
+  if (existingIndex >= 0) {
+    inMemoryArticles[existingIndex] = {
+      ...inMemoryArticles[existingIndex],
+      ...normalized,
+      id: inMemoryArticles[existingIndex].id
+    };
+    return inMemoryArticles[existingIndex];
+  }
+
+  inMemoryArticles.push(normalized);
+  return normalized;
+}
+
+export async function batchUploadArticles(items: UploadArticleInput[]): Promise<ArticleBase[]> {
+  const results: ArticleBase[] = [];
+  for (const item of items) {
+    results.push(await uploadArticle(item));
+  }
+  return results;
 }

@@ -3,14 +3,21 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { ArticleCard } from "@/components/ArticleCard";
+import { useLanguage } from "@/components/LanguageProvider";
 import { TopicFilters } from "@/components/TopicFilters";
 import { fetchFeed, fetchTopics } from "@/lib/client-api";
+import { t } from "@/lib/i18n";
 import { getBookmarks, getReadItems, toggleBookmark, toggleRead } from "@/lib/storage";
-import type { Article, TopicMeta } from "@/lib/types";
+import type { Article, TopicMeta, TopicOption } from "@/lib/types";
+
+const ALL_TOPIC = "__all__";
 
 export function DiscoverClient() {
-  const [topic, setTopic] = useState("全部");
-  const [topics, setTopics] = useState<TopicMeta[]>([{ name: "全部", count: 0 }]);
+  const { language } = useLanguage();
+  const copy = t(language);
+
+  const [topic, setTopic] = useState<string>(ALL_TOPIC);
+  const [topics, setTopics] = useState<TopicMeta[]>([]);
   const [items, setItems] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [savedSet, setSavedSet] = useState<Set<string>>(new Set());
@@ -19,12 +26,15 @@ export function DiscoverClient() {
   useEffect(() => {
     setSavedSet(getBookmarks());
     setReadSet(getReadItems());
-    fetchTopics().then(setTopics);
   }, []);
 
   useEffect(() => {
+    fetchTopics(language).then(setTopics);
+  }, [language]);
+
+  useEffect(() => {
     setLoading(true);
-    fetchFeed({ tab: "recommended", topic }).then((res) => {
+    fetchFeed({ tab: "recommended", topic: topic === ALL_TOPIC ? undefined : topic, lang: language }).then((res) => {
       setItems(
         [...res.items].sort(
           (a, b) => b.qualityScore + b.hotScore + b.freshnessScore - (a.qualityScore + a.hotScore + a.freshnessScore)
@@ -32,25 +42,34 @@ export function DiscoverClient() {
       );
       setLoading(false);
     });
-  }, [topic]);
+  }, [language, topic]);
 
   const subtitle = useMemo(() => {
-    if (topic === "全部") {
-      return "按综合质量排序，优先展示值得精读的内容。";
+    if (topic === ALL_TOPIC) {
+      return copy.discover.allSubtitle;
     }
-    return `当前筛选：${topic}`;
-  }, [topic]);
+    return `${copy.discover.topicPrefix}${topic}`;
+  }, [copy.discover.allSubtitle, copy.discover.topicPrefix, topic]);
+
+  const topicOptions = useMemo<TopicOption[]>(() => {
+    const allCount = topics.reduce((sum, entry) => sum + entry.count, 0);
+    return [{ value: ALL_TOPIC, label: copy.common.allTopics, count: allCount }, ...topics.map((entry) => ({
+      value: entry.name,
+      label: entry.name,
+      count: entry.count
+    }))];
+  }, [copy.common.allTopics, topics]);
 
   return (
     <section className="standalone-page">
       <header className="section-head simple">
         <div>
-          <h1>发现</h1>
+          <h1>{copy.discover.title}</h1>
           <p>{subtitle}</p>
         </div>
       </header>
 
-      <TopicFilters active={topic} onChange={setTopic} topics={topics} />
+      <TopicFilters active={topic} onChange={setTopic} topics={topicOptions} />
 
       {loading ? (
         <div className="loading-grid">

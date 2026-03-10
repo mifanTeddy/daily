@@ -1,8 +1,15 @@
+"use client";
+
 import Link from "next/link";
 
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useLanguage } from "@/components/LanguageProvider";
+import { t } from "@/lib/i18n";
 
 export function TopNav() {
+  const { language } = useLanguage();
+  const copy = t(language);
+
   return (
     <header className="top-nav">
       <div className="top-nav-inner">
@@ -12,12 +19,12 @@ export function TopNav() {
         </Link>
 
         <nav className="main-nav" aria-label="主导航">
-          <Link href="/">首页</Link>
-          <Link href="/discover">发现</Link>
-          <Link href="/bookmarks">收藏</Link>
+          <Link href="/">{copy.nav.home}</Link>
+          <Link href="/discover">{copy.nav.discover}</Link>
+          <Link href="/bookmarks">{copy.nav.bookmarks}</Link>
         </nav>
 
-        <ThemeToggle />
+        <LanguageToggle />
       </div>
     </header>
   );

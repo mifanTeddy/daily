@@ -1,10 +1,8 @@
 export type FeedTab = "recommended" | "latest" | "following";
-
+export type LanguageCode = "zh" | "en";
 export type Difficulty = "beginner" | "intermediate" | "advanced";
 
-export type LanguageCode = "zh" | "en";
-
-export interface ArticleBase {
+export interface ArticleRecord {
   id: string;
   titleZh: string;
   titleEn: string;
@@ -21,27 +19,8 @@ export interface ArticleBase {
   freshnessScore: number;
   hotScore: number;
   coverImage: string;
-}
-
-export interface Article extends ArticleBase {
-  title: string;
-  summary: string;
-}
-
-export interface FeedResponse {
-  items: Article[];
-  nextCursor: string | null;
-}
-
-export interface TopicMeta {
-  name: string;
-  count: number;
-}
-
-export interface TopicOption {
-  value: string;
-  label: string;
-  count: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UploadArticleInput {
@@ -61,4 +40,19 @@ export interface UploadArticleInput {
   freshnessScore: number;
   hotScore: number;
   coverImage: string;
+}
+
+export interface ArticleResponse extends ArticleRecord {
+  title: string;
+  summary: string;
+}
+
+export interface FeedResponse {
+  items: ArticleResponse[];
+  nextCursor: string | null;
+}
+
+export interface TopicMeta {
+  name: string;
+  count: number;
 }

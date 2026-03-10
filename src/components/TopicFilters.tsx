@@ -1,9 +1,9 @@
 "use client";
 
-import type { TopicMeta } from "@/lib/types";
+import type { TopicOption } from "@/lib/types";
 
 export function TopicFilters(props: {
-  topics: TopicMeta[];
+  topics: TopicOption[];
   active: string;
   onChange: (topic: string) => void;
 }) {
@@ -14,11 +14,11 @@ export function TopicFilters(props: {
       {topics.map((topic) => (
         <button
           type="button"
-          key={topic.name}
-          onClick={() => onChange(topic.name)}
-          className={active === topic.name ? "topic-pill active" : "topic-pill"}
+          key={topic.value}
+          onClick={() => onChange(topic.value)}
+          className={active === topic.value ? "topic-pill active" : "topic-pill"}
         >
-          {topic.name}
+          {topic.label}
           <span>{topic.count}</span>
         </button>
       ))}

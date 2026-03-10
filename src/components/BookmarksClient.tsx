@@ -1,33 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ArticleCard } from "@/components/ArticleCard";
-import { mockArticles } from "@/data/mockArticles";
+import { useLanguage } from "@/components/LanguageProvider";
+import { fetchAllArticles } from "@/lib/client-api";
+import { t } from "@/lib/i18n";
 import { getBookmarks, getReadItems, toggleBookmark, toggleRead } from "@/lib/storage";
+import type { Article } from "@/lib/types";
 
 export function BookmarksClient() {
+  const { language } = useLanguage();
+  const copy = t(language);
+
   const [savedSet, setSavedSet] = useState<Set<string>>(new Set());
   const [readSet, setReadSet] = useState<Set<string>>(new Set());
+  const [items, setItems] = useState<Article[]>([]);
 
   useEffect(() => {
     setSavedSet(getBookmarks());
     setReadSet(getReadItems());
   }, []);
 
-  const savedItems = mockArticles.filter((article) => savedSet.has(article.id));
+  useEffect(() => {
+    fetchAllArticles(language).then(setItems);
+  }, [language]);
+
+  const savedItems = useMemo(() => items.filter((article) => savedSet.has(article.id)), [items, savedSet]);
 
   return (
     <section className="standalone-page">
       <header className="section-head simple">
         <div>
-          <h1>我的收藏</h1>
-          <p>你标记的内容会保存在浏览器本地，后续可替换成账号云同步。</p>
+          <h1>{copy.bookmarks.title}</h1>
+          <p>{copy.bookmarks.subtitle}</p>
         </div>
       </header>
 
       {savedItems.length === 0 ? (
-        <div className="empty-box">还没有收藏内容，去首页或发现页试试。</div>
+        <div className="empty-box">{copy.bookmarks.empty}</div>
       ) : (
         <div className="card-list">
           {savedItems.map((article) => (
