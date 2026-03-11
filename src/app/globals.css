@@ -531,6 +531,10 @@ a {
 }
 
 @media (max-width: 860px) {
+  .layout-grid {
+    display: block;
+  }
+
   .top-nav-inner {
     min-height: 56px;
     width: min(1320px, 100% - 18px);
@@ -570,6 +574,7 @@ a {
   .section-head {
     flex-direction: column;
     gap: 12px;
+    margin-bottom: 12px;
   }
 
   .section-head h1 {
@@ -624,7 +629,7 @@ a {
   }
 
   .sidebar {
-    grid-template-columns: 1fr;
+    display: none;
   }
 }
 
