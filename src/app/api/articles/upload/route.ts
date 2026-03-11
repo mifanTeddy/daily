@@ -1,10 +1,5 @@
-import { NextResponse } from "next/server";
-
-import { uploadArticle } from "@/lib/api";
-import type { UploadArticleInput } from "@/lib/types";
+import { proxyPost } from "@/lib/backend-proxy";
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as UploadArticleInput;
-  const item = await uploadArticle(payload);
-  return NextResponse.json({ item }, { status: 201 });
+  return proxyPost(request, "/api/articles/upload");
 }
