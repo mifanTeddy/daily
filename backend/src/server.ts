@@ -19,9 +19,20 @@ const port = Number(process.env.PORT ?? "8787");
 const host = process.env.HOST ?? "0.0.0.0";
 const allowOrigin = process.env.ALLOW_ORIGIN ?? "*";
 const dataFile = resolve(process.cwd(), process.env.DATA_FILE ?? "./data/articles.json");
+const defaultCacheTtlMs = 5000;
+
+function parseCacheTtlMs(value: string | undefined): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return defaultCacheTtlMs;
+  }
+  return Math.floor(parsed);
+}
+
+const dataCacheTtlMs = parseCacheTtlMs(process.env.DATA_CACHE_TTL_MS);
 
 const app = Fastify({ logger: true });
-const store = new JsonArticleStore(dataFile);
+const store = new JsonArticleStore(dataFile, { cacheTtlMs: dataCacheTtlMs });
 
 await app.register(cors, {
   origin: allowOrigin === "*" ? true : allowOrigin,

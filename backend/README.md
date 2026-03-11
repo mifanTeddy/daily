@@ -27,6 +27,7 @@ npm run start
 - `HOST` 默认 `0.0.0.0`
 - `ALLOW_ORIGIN` 默认 `*`
 - `DATA_FILE` 默认 `./data/articles.json`
+- `DATA_CACHE_TTL_MS` 默认 `5000`（毫秒）。用于控制后端重新检查并加载 `DATA_FILE` 的间隔，设为 `0` 表示每次请求都检查文件变更。
 
 ## API
 
