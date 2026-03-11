@@ -19,7 +19,7 @@ export function FeedClient() {
   const { language } = useLanguage();
   const copy = t(language);
 
-  const [tab, setTab] = useState<FeedTab>("recommended");
+  const [tab, setTab] = useState<FeedTab>("latest");
   const [topic, setTopic] = useState<string>(ALL_TOPIC);
   const [topics, setTopics] = useState<TopicMeta[]>([]);
   const [items, setItems] = useState<Article[]>([]);

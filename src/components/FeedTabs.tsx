@@ -14,7 +14,7 @@ export function FeedTabs(props: {
 
   return (
     <div className="tabs" role="tablist" aria-label={copy.feed.tabAria}>
-      {(["recommended", "latest", "following"] as FeedTab[]).map((tab) => (
+      {(["latest", "recommended", "following"] as FeedTab[]).map((tab) => (
         <button
           key={tab}
           type="button"
