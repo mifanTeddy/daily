@@ -219,10 +219,16 @@ a {
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   border-radius: 999px;
   padding: 4px;
   border: 1px solid var(--border-subtle);
   background: var(--surface-float);
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab {
@@ -247,17 +253,14 @@ a {
   align-items: center;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 2px;
   margin-bottom: 10px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .topic-row::-webkit-scrollbar {
-  height: 6px;
-}
-
-.topic-row::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 999px;
+  display: none;
 }
 
 .topic-pill {
@@ -546,6 +549,8 @@ a {
     width: 100%;
     overflow-x: auto;
     padding: 4px 4px 2px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
 
   .main-nav::-webkit-scrollbar {
