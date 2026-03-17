@@ -83,9 +83,14 @@ export function FeedClient() {
     }))];
   }, [copy.common.allTopics, topics]);
 
+  const sidebarTopics = useMemo(
+    () => topicOptions.map((entry) => ({ ...entry, active: entry.value === topic })),
+    [topic, topicOptions]
+  );
+
   return (
     <div className="layout-grid">
-      <Sidebar topics={topicOptions.map((entry) => ({ name: entry.label, count: entry.count }))} />
+      <Sidebar topics={sidebarTopics} onTopicSelect={setTopic} />
 
       <section className="feed-pane">
         <header className="section-head">
