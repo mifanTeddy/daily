@@ -1,148 +1,143 @@
-import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 
+import { JsonArticleStore } from "./stores/json-store.js";
+import { PostgresArticleStore } from "./stores/postgres-store.js";
 import type { ArticleRecord } from "./types.js";
 
-interface JsonArticleStoreOptions {
-  cacheTtlMs?: number;
+export interface ArticleStore {
+  list(): Promise<ArticleRecord[]>;
+  findById(id: string): Promise<ArticleRecord | null>;
+  upsert(article: ArticleRecord): Promise<ArticleRecord>;
+  batchUpsert(items: ArticleRecord[]): Promise<ArticleRecord[]>;
 }
 
-export class JsonArticleStore {
-  private readonly filePath: string;
+interface CachedArticleStoreOptions {
+  cacheTtlMs: number;
+}
+
+interface CreateArticleStoreOptions {
+  driver?: string;
+  dataFile?: string;
+  databaseUrl?: string;
+  cacheTtlMs?: number;
+  postgresSchema?: string;
+}
+
+class CachedArticleStore implements ArticleStore {
+  private readonly store: ArticleStore;
   private readonly cacheTtlMs: number;
-  private articles: ArticleRecord[] = [];
-  private ready: Promise<void>;
-  private lastCheckAt = 0;
-  private lastLoadedMtimeMs = 0;
-  private refreshInFlight: Promise<void> | null = null;
+  private cache: ArticleRecord[] | null = null;
+  private cacheAt = 0;
+  private refreshInFlight: Promise<ArticleRecord[]> | null = null;
 
-  constructor(filePath: string, options: JsonArticleStoreOptions = {}) {
-    this.filePath = resolve(filePath);
-    const parsedTtl = Number(options.cacheTtlMs ?? 5000);
-    this.cacheTtlMs = Number.isFinite(parsedTtl) && parsedTtl >= 0 ? Math.floor(parsedTtl) : 5000;
-    this.ready = this.initialize();
+  constructor(store: ArticleStore, options: CachedArticleStoreOptions) {
+    this.store = store;
+    this.cacheTtlMs = Math.max(0, Math.floor(options.cacheTtlMs));
   }
 
-  private async initialize(): Promise<void> {
-    await mkdir(dirname(this.filePath), { recursive: true });
-    await this.loadFromDisk({ createIfMissing: true });
-  }
-
-  private parseArticles(raw: string): ArticleRecord[] {
-    try {
-      const parsed = JSON.parse(raw) as ArticleRecord[];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
+  private isCacheFresh(): boolean {
+    if (!this.cache) {
+      return false;
     }
-  }
-
-  private async persist(): Promise<void> {
-    const tempPath = `${this.filePath}.tmp`;
-    await writeFile(tempPath, JSON.stringify(this.articles, null, 2), "utf-8");
-    await rename(tempPath, this.filePath);
-    const fileStat = await stat(this.filePath);
-    this.lastLoadedMtimeMs = fileStat.mtimeMs;
-    this.lastCheckAt = Date.now();
-  }
-
-  private async loadFromDisk(options: { createIfMissing: boolean }): Promise<void> {
-    try {
-      const raw = await readFile(this.filePath, "utf-8");
-      this.articles = this.parseArticles(raw);
-      const fileStat = await stat(this.filePath);
-      this.lastLoadedMtimeMs = fileStat.mtimeMs;
-      this.lastCheckAt = Date.now();
-    } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      if (options.createIfMissing && err.code === "ENOENT") {
-        this.articles = [];
-        await this.persist();
-        return;
-      }
-      throw error;
+    if (this.cacheTtlMs === 0) {
+      return false;
     }
+    return Date.now() - this.cacheAt < this.cacheTtlMs;
   }
 
-  private async refreshFromDiskIfNeeded(): Promise<void> {
-    const now = Date.now();
-    if (this.cacheTtlMs > 0 && now - this.lastCheckAt < this.cacheTtlMs) {
-      return;
+  private clone(items: ArticleRecord[]): ArticleRecord[] {
+    return items.map((item) => ({ ...item, topics: [...item.topics] }));
+  }
+
+  private async loadList(force = false): Promise<ArticleRecord[]> {
+    if (!force && this.isCacheFresh()) {
+      return this.clone(this.cache ?? []);
     }
 
-    this.lastCheckAt = now;
+    if (!force && this.refreshInFlight) {
+      return this.clone(await this.refreshInFlight);
+    }
+
+    this.refreshInFlight = this.store.list();
 
     try {
-      const fileStat = await stat(this.filePath);
-      if (fileStat.mtimeMs === this.lastLoadedMtimeMs) {
-        return;
-      }
-
-      const raw = await readFile(this.filePath, "utf-8");
-      this.articles = this.parseArticles(raw);
-      this.lastLoadedMtimeMs = fileStat.mtimeMs;
-    } catch (error) {
-      const err = error as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") {
-        this.articles = [];
-        await this.persist();
-        return;
-      }
-      throw error;
-    }
-  }
-
-  private async ensureFresh(): Promise<void> {
-    if (this.refreshInFlight) {
-      await this.refreshInFlight;
-      return;
-    }
-
-    this.refreshInFlight = this.refreshFromDiskIfNeeded();
-    try {
-      await this.refreshInFlight;
+      const items = await this.refreshInFlight;
+      this.cache = this.clone(items);
+      this.cacheAt = Date.now();
+      return this.clone(items);
     } finally {
       this.refreshInFlight = null;
     }
   }
 
-  private upsertInMemory(article: ArticleRecord): ArticleRecord {
-    const index = this.articles.findIndex((entry) => entry.id === article.id || entry.url === article.url);
-    if (index >= 0) {
-      this.articles[index] = article;
-    } else {
-      this.articles.push(article);
-    }
-    return article;
-  }
-
   async list(): Promise<ArticleRecord[]> {
-    await this.ready;
-    await this.ensureFresh();
-    return [...this.articles];
+    return this.loadList();
   }
 
   async findById(id: string): Promise<ArticleRecord | null> {
-    await this.ready;
-    await this.ensureFresh();
-    return this.articles.find((entry) => entry.id === id) ?? null;
+    const items = await this.loadList();
+    return items.find((entry) => entry.id === id) ?? null;
   }
 
   async upsert(article: ArticleRecord): Promise<ArticleRecord> {
-    await this.ready;
-    await this.ensureFresh();
-    const saved = this.upsertInMemory(article);
-    await this.persist();
+    const saved = await this.store.upsert(article);
+    const items = await this.loadList(true);
+    const index = items.findIndex((entry) => entry.id === saved.id);
+    if (index >= 0) {
+      items[index] = saved;
+    } else {
+      items.push(saved);
+    }
+    this.cache = this.clone(items);
+    this.cacheAt = Date.now();
     return saved;
   }
 
   async batchUpsert(items: ArticleRecord[]): Promise<ArticleRecord[]> {
-    await this.ready;
-    await this.ensureFresh();
-    const result = items.map((item) => this.upsertInMemory(item));
-    if (result.length > 0) {
-      await this.persist();
-    }
-    return result;
+    const saved = await this.store.batchUpsert(items);
+    this.cache = this.clone(await this.store.list());
+    this.cacheAt = Date.now();
+    return saved;
   }
+}
+
+function normalizeDriver(driver: string | undefined, databaseUrl: string | undefined): "json" | "postgres" {
+  if (driver === "postgres") {
+    return "postgres";
+  }
+  if (driver === "json" || !databaseUrl) {
+    return "json";
+  }
+
+  const lowered = databaseUrl.toLowerCase();
+  if (
+    lowered.startsWith("postgres://") ||
+    lowered.startsWith("postgresql://") ||
+    lowered.startsWith("psql://")
+  ) {
+    return "postgres";
+  }
+
+  return "json";
+}
+
+export function createArticleStore(options: CreateArticleStoreOptions): {
+  driver: "json" | "postgres";
+  store: ArticleStore;
+} {
+  const driver = normalizeDriver(options.driver, options.databaseUrl);
+  const cacheTtlMs = Number.isFinite(options.cacheTtlMs) ? Number(options.cacheTtlMs) : 0;
+
+  const baseStore: ArticleStore =
+    driver === "postgres"
+      ? new PostgresArticleStore({
+          databaseUrl: options.databaseUrl,
+          schema: options.postgresSchema
+        })
+      : new JsonArticleStore(resolve(options.dataFile ?? "./data/articles.json"));
+
+  return {
+    driver,
+    store: new CachedArticleStore(baseStore, { cacheTtlMs })
+  };
 }

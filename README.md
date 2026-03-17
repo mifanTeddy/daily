@@ -84,7 +84,11 @@ npm run start
 - `PORT`（默认 `8787`）
 - `HOST`（默认 `0.0.0.0`）
 - `ALLOW_ORIGIN`（默认 `*`，生产建议填前端域名）
-- `DATA_FILE`（默认 `./data/articles.json`）
+- `STORAGE_DRIVER`（可选 `json` / `postgres`）
+- `DATA_FILE`（默认 `./data/articles.json`，仅 `json` 驱动使用）
+- `DATABASE_URL`（`postgres` 驱动必填）
+- `POSTGRES_SCHEMA`（默认 `public`）
+- `DATA_CACHE_TTL_MS`（默认 `5000`，读取缓存毫秒数）
 
 ### 方式 B：Docker 部署
 

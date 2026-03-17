@@ -1,6 +1,6 @@
 # daily-cn backend
 
-独立后端服务，提供 Feed、话题、文章详情与双语上传接口。
+独立后端服务，提供 Feed、话题、文章详情与双语上传接口。API 保持稳定，存储由部署环境决定。
 
 ## 本地启动
 
@@ -26,8 +26,11 @@ npm run start
 - `PORT` 默认 `8787`
 - `HOST` 默认 `0.0.0.0`
 - `ALLOW_ORIGIN` 默认 `*`
-- `DATA_FILE` 默认 `./data/articles.json`
-- `DATA_CACHE_TTL_MS` 默认 `5000`（毫秒）。用于控制后端重新检查并加载 `DATA_FILE` 的间隔，设为 `0` 表示每次请求都检查文件变更。
+- `STORAGE_DRIVER` 可选 `json` / `postgres`。不填时会根据 `DATABASE_URL` 自动判断，没有数据库地址则回落到 `json`。
+- `DATA_FILE` 默认 `./data/articles.json`。仅 `json` 驱动使用。
+- `DATABASE_URL`：`postgres` 驱动必填。
+- `POSTGRES_SCHEMA` 默认 `public`。
+- `DATA_CACHE_TTL_MS` 默认 `5000`（毫秒）。控制读取缓存有效期；设为 `0` 表示每次请求都直接读取底层存储。
 
 ## API
 

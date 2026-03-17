@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 
-import { JsonArticleStore } from "./store.js";
+import { createArticleStore } from "./store.js";
 import {
   buildFeed,
   buildRelated,
@@ -19,6 +19,9 @@ const port = Number(process.env.PORT ?? "8787");
 const host = process.env.HOST ?? "0.0.0.0";
 const allowOrigin = process.env.ALLOW_ORIGIN ?? "*";
 const dataFile = resolve(process.cwd(), process.env.DATA_FILE ?? "./data/articles.json");
+const storeDriver = process.env.STORAGE_DRIVER;
+const databaseUrl = process.env.DATABASE_URL;
+const postgresSchema = process.env.POSTGRES_SCHEMA;
 const defaultCacheTtlMs = 5000;
 
 function parseCacheTtlMs(value: string | undefined): number {
@@ -32,12 +35,20 @@ function parseCacheTtlMs(value: string | undefined): number {
 const dataCacheTtlMs = parseCacheTtlMs(process.env.DATA_CACHE_TTL_MS);
 
 const app = Fastify({ logger: true });
-const store = new JsonArticleStore(dataFile, { cacheTtlMs: dataCacheTtlMs });
+const { driver, store } = createArticleStore({
+  driver: storeDriver,
+  dataFile,
+  databaseUrl,
+  cacheTtlMs: dataCacheTtlMs,
+  postgresSchema
+});
 
 await app.register(cors, {
   origin: allowOrigin === "*" ? true : allowOrigin,
   methods: ["GET", "POST", "OPTIONS"]
 });
+
+app.log.info({ driver }, "daily article store initialized");
 
 function parseLanguage(value: unknown): LanguageCode {
   return value === "en" ? "en" : "zh";
